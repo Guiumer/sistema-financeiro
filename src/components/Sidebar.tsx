@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { LayoutDashboard, ArrowLeftRight, FileText, Bell, Settings, TrendingUp, Menu, X } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, FileText, Bell, Settings, TrendingUp, Menu, X, LogOut } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 
 type Page = 'dashboard' | 'transacoes' | 'anotacoes' | 'notificacoes' | 'configuracoes';
 
@@ -19,12 +20,20 @@ interface SidebarProps {
 
 export default function Sidebar({ current, onChange }: SidebarProps) {
   const { unreadCount } = useApp();
+  const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   function navigate(page: Page) {
     onChange(page);
     setMobileOpen(false);
   }
+
+  const initials = user?.name
+    .split(' ')
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase() ?? '?';
 
   const SidebarContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px 12px' }}>
@@ -88,9 +97,48 @@ export default function Sidebar({ current, onChange }: SidebarProps) {
         </ul>
       </nav>
 
-      {/* Footer */}
+      {/* User info + logout */}
       <div style={{ paddingTop: 16, borderTop: '1px solid #2a2d3e' }}>
-        <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center' }}>v1.0.0 · Dados locais</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderRadius: 8, marginBottom: 4 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: 13, fontWeight: 700,
+          }}>
+            {initials}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.name}
+            </p>
+            <p style={{ color: '#64748b', fontSize: 11, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.email}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={logout}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: 'none',
+            cursor: 'pointer',
+            background: 'transparent',
+            color: '#64748b',
+            fontSize: 13,
+            transition: 'background 0.15s, color 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = '#f87171'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
+        >
+          <LogOut size={16} />
+          Sair da conta
+        </button>
       </div>
     </div>
   );
