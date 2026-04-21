@@ -28,12 +28,13 @@ export default function Sidebar({ current, onChange }: SidebarProps) {
     setMobileOpen(false);
   }
 
-  const initials = user?.name
+  const displayName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? '?';
+  const initials = displayName
     .split(' ')
     .slice(0, 2)
-    .map(w => w[0])
+    .map((w: string) => w[0])
     .join('')
-    .toUpperCase() ?? '?';
+    .toUpperCase();
 
   const SidebarContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px 12px' }}>
@@ -110,7 +111,7 @@ export default function Sidebar({ current, onChange }: SidebarProps) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user?.name}
+              {displayName}
             </p>
             <p style={{ color: '#64748b', fontSize: 11, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user?.email}

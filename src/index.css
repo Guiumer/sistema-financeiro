@@ -18,45 +18,79 @@ body {
   text-align: left;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Prevent any element from causing horizontal overflow */
+main {
+  overflow-x: hidden;
+  min-width: 0;
 }
 
-::-webkit-scrollbar-track {
-  background: #1a1d27;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1a1d27; }
+::-webkit-scrollbar-thumb { background: #2a2d3e; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3d4e; }
 
-::-webkit-scrollbar-thumb {
-  background: #2a2d3e;
-  border-radius: 3px;
-}
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #3a3d4e;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.5);
-}
-
+/* ── Mobile ─────────────────────────────── */
 @media (max-width: 768px) {
-  .desktop-sidebar {
-    display: none !important;
+  .desktop-sidebar { display: none !important; }
+  .mobile-menu-btn { display: flex !important; }
+  main { padding-top: 60px; }
+
+  /* Reduce page padding on mobile */
+  .page-padding { padding: 16px !important; }
+
+  /* Hide non-essential table columns on mobile */
+  .col-hide-mobile { display: none !important; }
+
+  /* Summary cards: 1 column on very small, 2 on medium-small */
+  .summary-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
   }
-  .mobile-menu-btn {
-    display: flex !important;
+  .summary-grid .col-span-full-mobile {
+    grid-column: 1 / -1 !important;
   }
-  main {
-    padding-top: 60px;
+
+  /* Stat cards: 2 per row on mobile */
+  .stat-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Charts: full width stacked */
+  .chart-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Table wrapper must scroll, not overflow the viewport */
+  .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* Shrink currency text slightly so it fits */
+  .currency-value { font-size: 13px !important; }
+
+  /* Filter bar: stack vertically */
+  .filter-bar {
+    flex-direction: column !important;
+  }
+  .filter-bar > * { width: 100% !important; flex: unset !important; }
+
+  /* Page header: stack on small screens */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
   }
 }
 
 @media (min-width: 769px) {
-  .mobile-sidebar {
-    display: none !important;
-  }
-  .mobile-overlay {
-    display: none !important;
-  }
+  .mobile-sidebar  { display: none !important; }
+  .mobile-overlay  { display: none !important; }
+  .summary-grid    { grid-template-columns: repeat(3, 1fr); }
+  .stat-grid       { grid-template-columns: repeat(4, 1fr); }
+  .chart-grid      { grid-template-columns: 2fr 1fr; }
 }

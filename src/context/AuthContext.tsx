@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import type { User } from '../types/auth';
-import { generateSalt, hashPassword, verifyPassword } from '../utils/crypto';
-import { generateId } from '../utils/format';
+import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
@@ -14,80 +13,61 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const USERS_KEY = 'sf_users';
-const SESSION_KEY = 'sf_session';
-
-function loadUsers(): User[] {
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveUsers(users: User[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser]         = useState<User | null>(null);
+  const [isLoading, setLoading] = useState(true);
 
   useEffect(() => {
-    const sessionId = localStorage.getItem(SESSION_KEY);
-    if (sessionId) {
-      const users = loadUsers();
-      const found = users.find(u => u.id === sessionId);
-      if (found) setUser(found);
-    }
-    setIsLoading(false);
+    // Restore session on page load
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth state changes (login/logout from any tab or device)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   async function login(email: string, password: string): Promise<boolean> {
-    const users = loadUsers();
-    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (!found) {
-      toast.error('E-mail não encontrado.');
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast.error(error.message === 'Invalid login credentials'
+        ? 'E-mail ou senha incorretos.'
+        : error.message);
       return false;
     }
-    const valid = await verifyPassword(password, found.salt, found.passwordHash);
-    if (!valid) {
-      toast.error('Senha incorreta.');
-      return false;
-    }
-    localStorage.setItem(SESSION_KEY, found.id);
-    setUser(found);
-    toast.success(`Bem-vindo, ${found.name}!`);
+    const name = data.user?.user_metadata?.name ?? email.split('@')[0];
+    toast.success(`Bem-vindo, ${name}!`);
     return true;
   }
 
   async function register(name: string, email: string, password: string): Promise<boolean> {
-    const users = loadUsers();
-    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-      toast.error('Este e-mail já está cadastrado.');
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
+    });
+    if (error) {
+      toast.error(error.message === 'User already registered'
+        ? 'Este e-mail já está cadastrado.'
+        : error.message);
       return false;
     }
-    const salt = generateSalt();
-    const passwordHash = await hashPassword(password, salt);
-    const newUser: User = {
-      id: generateId(),
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      passwordHash,
-      salt,
-      createdAt: new Date().toISOString(),
-    };
-    saveUsers([...users, newUser]);
-    localStorage.setItem(SESSION_KEY, newUser.id);
-    setUser(newUser);
-    toast.success(`Conta criada! Bem-vindo, ${newUser.name}!`);
+    if (data.user && !data.session) {
+      // Email confirmation required
+      toast.success('Conta criada! Verifique seu e-mail para confirmar.');
+      return true;
+    }
+    toast.success(`Conta criada! Bem-vindo, ${name}!`);
     return true;
   }
 
-  function logout() {
-    localStorage.removeItem(SESSION_KEY);
-    setUser(null);
+  async function logout() {
+    await supabase.auth.signOut();
     toast.success('Sessão encerrada.');
   }
 

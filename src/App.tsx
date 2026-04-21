@@ -26,9 +26,7 @@ function AppContent() {
     );
   }
 
-  if (!user) {
-    return <AuthPage />;
-  }
+  if (!user) return <AuthPage />;
 
   const pages: Record<Page, React.ReactNode> = {
     dashboard: <Dashboard />,
@@ -39,10 +37,11 @@ function AppContent() {
   };
 
   return (
+    // key={user.id} ensures AppProvider fully remounts on user change
     <AppProvider key={user.id} userId={user.id}>
       <div style={{ display: 'flex', minHeight: '100vh', background: '#0f1117' }}>
         <Sidebar current={page} onChange={setPage} />
-        <main style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+        <main style={{ flex: 1, minWidth: 0, overflowX: 'hidden', overflowY: 'auto' }}>
           {pages[page]}
         </main>
       </div>
@@ -57,15 +56,9 @@ export default function App() {
       <Toaster
         position="bottom-right"
         toastOptions={{
-          style: {
-            background: '#1e2130',
-            color: '#e2e8f0',
-            border: '1px solid #2a2d3e',
-            fontSize: 13,
-            borderRadius: 10,
-          },
+          style: { background: '#1e2130', color: '#e2e8f0', border: '1px solid #2a2d3e', fontSize: 13, borderRadius: 10 },
           success: { iconTheme: { primary: '#22c55e', secondary: '#1e2130' } },
-          error: { iconTheme: { primary: '#ef4444', secondary: '#1e2130' } },
+          error:   { iconTheme: { primary: '#ef4444', secondary: '#1e2130' } },
         }}
       />
     </AuthProvider>

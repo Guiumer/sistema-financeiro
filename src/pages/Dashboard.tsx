@@ -45,9 +45,7 @@ export default function Dashboard() {
   const categoryData = useMemo(() => {
     const current = transactions.filter(t => isSameMonth(t.date, 0) && t.type === 'despesa');
     const grouped: Record<string, number> = {};
-    current.forEach(t => {
-      grouped[t.category] = (grouped[t.category] || 0) + t.value;
-    });
+    current.forEach(t => { grouped[t.category] = (grouped[t.category] || 0) + t.value; });
     return Object.entries(grouped)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
@@ -62,146 +60,120 @@ export default function Dashboard() {
   const goalPct = Math.min((currentMonthStats.despesas / settings.monthlyGoal) * 100, 100);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 8, padding: '10px 14px' }}>
-          <p style={{ color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>{label}</p>
-          {payload.map((p: any) => (
-            <p key={p.name} style={{ color: p.color, margin: '2px 0' }}>
-              {p.name}: {formatCurrency(p.value)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
+    if (!active || !payload?.length) return null;
+    return (
+      <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 8, padding: '10px 14px' }}>
+        <p style={{ color: '#94a3b8', marginBottom: 6, fontWeight: 600, fontSize: 12 }}>{label}</p>
+        {payload.map((p: any) => (
+          <p key={p.name} style={{ color: p.color, margin: '2px 0', fontSize: 12 }}>
+            {p.name}: {formatCurrency(p.value)}
+          </p>
+        ))}
+      </div>
+    );
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-100">Dashboard</h1>
-        <p className="text-slate-400 text-sm mt-1">Visão geral do mês atual</p>
-      </div>
-
-      {/* Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Saldo Atual"
-          value={formatCurrency(currentMonthStats.saldo)}
-          icon={<Wallet size={20} />}
-          color={currentMonthStats.saldo >= 0 ? 'green' : 'red'}
-          subtitle="Receitas - Despesas"
-        />
-        <StatCard
-          title="Total Receitas"
-          value={formatCurrency(currentMonthStats.receitas)}
-          icon={<TrendingUp size={20} />}
-          color="green"
-          subtitle="Mês atual"
-        />
-        <StatCard
-          title="Total Despesas"
-          value={formatCurrency(currentMonthStats.despesas)}
-          icon={<TrendingDown size={20} />}
-          color="red"
-          subtitle="Mês atual"
-        />
-        <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 20 }}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-slate-400 text-sm font-medium">Meta Mensal</span>
-            <Target size={20} className="text-blue-400" />
-          </div>
-          <p className="text-2xl font-bold text-slate-100">{goalPct.toFixed(0)}%</p>
-          <div style={{ background: '#2a2d3e', borderRadius: 4, height: 6, marginTop: 10, marginBottom: 6 }}>
-            <div
-              style={{
-                width: `${goalPct}%`,
-                height: '100%',
-                borderRadius: 4,
-                background: goalPct >= 100 ? '#ef4444' : goalPct >= 80 ? '#f59e0b' : '#22c55e',
-                transition: 'width 0.5s',
-              }}
-            />
-          </div>
-          <p className="text-xs text-slate-400">{formatCurrency(currentMonthStats.despesas)} / {formatCurrency(settings.monthlyGoal)}</p>
+    <div className="page-padding" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#e2e8f0', margin: 0 }}>Dashboard</h1>
+          <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 2 }}>Visão geral do mês atual</p>
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Bar Chart */}
-        <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 20 }} className="lg:col-span-2">
-          <h2 className="text-slate-200 font-semibold mb-4">Receitas x Despesas (últimos 6 meses)</h2>
-          <ResponsiveContainer width="100%" height={260}>
+      {/* Stat Cards — 2 cols on mobile, 4 on desktop */}
+      <div className="stat-grid" style={{ display: 'grid', gap: 12 }}>
+        <StatCard title="Saldo Atual"    value={formatCurrency(currentMonthStats.saldo)}    icon={<Wallet size={18}/>}     color={currentMonthStats.saldo >= 0 ? 'green' : 'red'} subtitle="Receitas − Despesas" />
+        <StatCard title="Total Receitas" value={formatCurrency(currentMonthStats.receitas)} icon={<TrendingUp size={18}/>}  color="green"  subtitle="Mês atual" />
+        <StatCard title="Total Despesas" value={formatCurrency(currentMonthStats.despesas)} icon={<TrendingDown size={18}/>} color="red"   subtitle="Mês atual" />
+        {/* Goal card */}
+        <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>Meta Mensal</span>
+            <Target size={18} color="#60a5fa" />
+          </div>
+          <p style={{ fontSize: 22, fontWeight: 700, color: '#e2e8f0', margin: 0 }}>{goalPct.toFixed(0)}%</p>
+          <div style={{ background: '#2a2d3e', borderRadius: 4, height: 5, margin: '8px 0 6px' }}>
+            <div style={{ width: `${goalPct}%`, height: '100%', borderRadius: 4, transition: 'width 0.5s', background: goalPct >= 100 ? '#ef4444' : goalPct >= 80 ? '#f59e0b' : '#22c55e' }} />
+          </div>
+          <p style={{ fontSize: 11, color: '#64748b', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {formatCurrency(currentMonthStats.despesas)} / {formatCurrency(settings.monthlyGoal)}
+          </p>
+        </div>
+      </div>
+
+      {/* Charts — side-by-side on desktop, stacked on mobile */}
+      <div className="chart-grid" style={{ display: 'grid', gap: 12 }}>
+        <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 16, minWidth: 0 }}>
+          <h2 style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 14, margin: '0 0 16px' }}>Receitas x Despesas (6 meses)</h2>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={last6MonthsData} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" stroke="#2a2d3e" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
+              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} width={36} />
               <Tooltip content={<CustomTooltip />} />
-              <Legend formatter={(v) => <span style={{ color: '#94a3b8', fontSize: 12 }}>{v}</span>} />
-              <Bar dataKey="receitas" fill="#22c55e" radius={[4, 4, 0, 0]} name="Receitas" />
-              <Bar dataKey="despesas" fill="#ef4444" radius={[4, 4, 0, 0]} name="Despesas" />
+              <Legend formatter={v => <span style={{ color: '#94a3b8', fontSize: 11 }}>{v}</span>} />
+              <Bar dataKey="receitas" fill="#22c55e" radius={[3, 3, 0, 0]} name="Receitas" />
+              <Bar dataKey="despesas" fill="#ef4444" radius={[3, 3, 0, 0]} name="Despesas" />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Pie Chart */}
-        <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 20 }}>
-          <h2 className="text-slate-200 font-semibold mb-4">Gastos por Categoria</h2>
+        <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 16, minWidth: 0 }}>
+          <h2 style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 14, margin: '0 0 12px' }}>Gastos por Categoria</h2>
           {categoryData.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={160}>
+              <ResponsiveContainer width="100%" height={150}>
                 <PieChart>
-                  <Pie data={categoryData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
-                    {categoryData.map((_, index) => (
-                      <Cell key={index} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
-                    ))}
+                  <Pie data={categoryData} cx="50%" cy="50%" innerRadius={42} outerRadius={65} dataKey="value" paddingAngle={3}>
+                    {categoryData.map((_, i) => <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />)}
                   </Pie>
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} contentStyle={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 8 }} />
+                  <Tooltip formatter={v => formatCurrency(Number(v))} contentStyle={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 8, fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="space-y-2 mt-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
                 {categoryData.slice(0, 5).map((item, i) => (
-                  <div key={item.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: CATEGORY_COLORS[i % CATEGORY_COLORS.length], flexShrink: 0 }} />
-                      <span className="text-slate-400 text-xs">{item.name}</span>
+                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: CATEGORY_COLORS[i % CATEGORY_COLORS.length], flexShrink: 0 }} />
+                      <span style={{ color: '#94a3b8', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
                     </div>
-                    <span className="text-slate-300 text-xs font-medium">{formatCurrency(item.value)}</span>
+                    <span style={{ color: '#e2e8f0', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{formatCurrency(item.value)}</span>
                   </div>
                 ))}
               </div>
             </>
           ) : (
-            <p className="text-slate-500 text-sm text-center mt-8">Sem despesas este mês</p>
+            <p style={{ color: '#64748b', fontSize: 13, textAlign: 'center', marginTop: 40 }}>Sem despesas este mês</p>
           )}
         </div>
       </div>
 
       {/* Recent Transactions */}
-      <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 20 }}>
-        <h2 className="text-slate-200 font-semibold mb-4">Últimas Transações</h2>
-        <div className="space-y-3">
-          {recentTransactions.map(tx => (
-            <div key={tx.id} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #2a2d3e' }}>
-              <div className="flex items-center gap-3">
+      <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 16, minWidth: 0 }}>
+        <h2 style={{ color: '#e2e8f0', fontWeight: 600, fontSize: 14, margin: '0 0 14px' }}>Últimas Transações</h2>
+        <div>
+          {recentTransactions.map((tx, idx) => (
+            <div key={tx.id} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 0', gap: 10,
+              borderBottom: idx < recentTransactions.length - 1 ? '1px solid #2a2d3e' : 'none',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
                 <div style={{
-                  width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32, height: 32, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: tx.type === 'receita' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
                 }}>
-                  {tx.type === 'receita'
-                    ? <ArrowUpRight size={16} className="text-green-400" />
-                    : <ArrowDownRight size={16} className="text-red-400" />
-                  }
+                  {tx.type === 'receita' ? <ArrowUpRight size={15} color="#4ade80" /> : <ArrowDownRight size={15} color="#f87171" />}
                 </div>
-                <div>
-                  <p className="text-slate-200 text-sm font-medium">{tx.description}</p>
-                  <p className="text-slate-500 text-xs">{tx.category} · {formatDate(tx.date)}</p>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description}</p>
+                  <p style={{ color: '#64748b', fontSize: 11, margin: 0 }}>{tx.category} · {formatDate(tx.date)}</p>
                 </div>
               </div>
-              <span style={{ color: tx.type === 'receita' ? '#4ade80' : '#f87171', fontWeight: 600, fontSize: 15 }}>
-                {tx.type === 'receita' ? '+' : '-'}{formatCurrency(tx.value)}
+              <span className="currency-value" style={{ color: tx.type === 'receita' ? '#4ade80' : '#f87171', fontWeight: 700, fontSize: 14, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                {tx.type === 'receita' ? '+' : '−'}{formatCurrency(tx.value)}
               </span>
             </div>
           ))}
@@ -214,18 +186,16 @@ export default function Dashboard() {
 function StatCard({ title, value, icon, color, subtitle }: {
   title: string; value: string; icon: React.ReactNode; color: 'green' | 'red' | 'blue'; subtitle: string;
 }) {
-  const colors = { green: '#22c55e', red: '#ef4444', blue: '#3b82f6' };
+  const colors   = { green: '#22c55e', red: '#ef4444', blue: '#3b82f6' };
   const bgColors = { green: 'rgba(34,197,94,0.12)', red: 'rgba(239,68,68,0.12)', blue: 'rgba(59,130,246,0.12)' };
   return (
-    <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 20 }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-slate-400 text-sm font-medium">{title}</span>
-        <div style={{ background: bgColors[color], color: colors[color], borderRadius: 8, padding: '6px' }}>
-          {icon}
-        </div>
+    <div style={{ background: '#1e2130', border: '1px solid #2a2d3e', borderRadius: 12, padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>{title}</span>
+        <div style={{ background: bgColors[color], color: colors[color], borderRadius: 8, padding: 6, display: 'flex' }}>{icon}</div>
       </div>
-      <p className="text-2xl font-bold text-slate-100">{value}</p>
-      <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
+      <p className="currency-value" style={{ fontSize: 20, fontWeight: 700, color: '#e2e8f0', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</p>
+      <p style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{subtitle}</p>
     </div>
   );
 }
