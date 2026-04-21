@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import type { Transaction, Note, Notification, Settings } from '../types';
 import { DEFAULT_SETTINGS } from '../types';
@@ -40,7 +40,7 @@ function saveToStorage(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-// Seeds mock data the first time a user logs in (key does not exist yet)
+// Loads from storage if key exists, otherwise seeds initial data and saves it.
 function loadOrSeed<T>(key: string, seed: T): T {
   const raw = localStorage.getItem(key);
   if (raw === null) {
@@ -60,60 +60,53 @@ interface AppProviderProps {
 }
 
 export function AppProvider({ userId, children }: AppProviderProps) {
-  const k = (name: string) => `sf_${name}_${userId}`;
+  // Keys are stable strings for this component instance (AppProvider remounts on user change via key prop in App.tsx)
+  const txKey       = `sf_transactions_${userId}`;
+  const notesKey    = `sf_notes_${userId}`;
+  const notifsKey   = `sf_notifications_${userId}`;
+  const settingsKey = `sf_settings_${userId}`;
 
-  const [transactions, setTransactions] = useState<Transaction[]>(() =>
-    loadOrSeed(k('transactions'), mockTransactions)
-  );
-  const [notes, setNotes] = useState<Note[]>(() =>
-    loadOrSeed(k('notes'), mockNotes)
-  );
-  const [notifications, setNotifications] = useState<Notification[]>(() =>
-    loadOrSeed(k('notifications'), mockNotifications)
-  );
-  const [settings, setSettings] = useState<Settings>(() =>
-    loadFromStorage(k('settings'), DEFAULT_SETTINGS)
-  );
+  const [transactions,  setTransactions]  = useState<Transaction[]> (() => loadOrSeed(txKey,       mockTransactions));
+  const [notes,         setNotes]         = useState<Note[]>         (() => loadOrSeed(notesKey,    mockNotes));
+  const [notifications, setNotifications] = useState<Notification[]> (() => loadOrSeed(notifsKey,  mockNotifications));
+  const [settings,      setSettings]      = useState<Settings>       (() => loadFromStorage(settingsKey, DEFAULT_SETTINGS));
 
-  // Re-hydrate when user switches (e.g. logout → login as another user)
-  useEffect(() => {
-    setTransactions(loadOrSeed(k('transactions'), mockTransactions));
-    setNotes(loadOrSeed(k('notes'), mockNotes));
-    setNotifications(loadOrSeed(k('notifications'), mockNotifications));
-    setSettings(loadFromStorage(k('settings'), DEFAULT_SETTINGS));
-  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Persist to storage whenever data changes.
+  // Keys are included in deps so the linter is satisfied; they're effectively constants per instance.
+  useEffect(() => { saveToStorage(txKey,       transactions);  }, [txKey,       transactions]);
+  useEffect(() => { saveToStorage(notesKey,    notes);         }, [notesKey,    notes]);
+  useEffect(() => { saveToStorage(notifsKey,   notifications); }, [notifsKey,   notifications]);
+  useEffect(() => { saveToStorage(settingsKey, settings);      }, [settingsKey, settings]);
 
-  useEffect(() => { saveToStorage(k('transactions'), transactions); }, [transactions]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { saveToStorage(k('notes'), notes); }, [notes]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { saveToStorage(k('notifications'), notifications); }, [notifications]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { saveToStorage(k('settings'), settings); }, [settings]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Ref keeps settings readable inside callbacks without adding to deps or using setState-inside-setState.
+  const settingsRef = useRef(settings);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
 
   const addSystemNotification = useCallback((notif: Omit<Notification, 'id' | 'createdAt' | 'read'>) => {
-    const newNotif: Notification = {
+    setNotifications(prev => [{
       ...notif,
       id: generateId(),
       read: false,
       createdAt: new Date().toISOString(),
-    };
-    setNotifications(prev => [newNotif, ...prev]);
+    }, ...prev]);
   }, []);
 
-  const checkMonthlyGoal = useCallback((newTransactions: Transaction[], goal: number) => {
-    const totalExpenses = newTransactions
+  const checkMonthlyGoal = useCallback((updatedTransactions: Transaction[], goal: number) => {
+    const totalExpenses = updatedTransactions
       .filter(t => t.type === 'despesa' && isSameMonth(t.date, 0))
       .reduce((sum, t) => sum + t.value, 0);
     const pct = (totalExpenses / goal) * 100;
-    if (pct >= 80 && pct < 100) {
-      addSystemNotification({
-        type: 'warning',
-        title: 'Meta mensal em risco',
-        message: `Seus gastos atingiram ${pct.toFixed(0)}% da meta mensal de ${formatCurrency(goal)}.`,
-      });
-    } else if (pct >= 100) {
+    if (pct >= 100) {
       addSystemNotification({
         type: 'error',
         title: 'Meta mensal ultrapassada!',
         message: `Você ultrapassou a meta mensal. Total de gastos: ${formatCurrency(totalExpenses)}.`,
+      });
+    } else if (pct >= 80) {
+      addSystemNotification({
+        type: 'warning',
+        title: 'Meta mensal em risco',
+        message: `Seus gastos atingiram ${pct.toFixed(0)}% da meta mensal de ${formatCurrency(goal)}.`,
       });
     }
   }, [addSystemNotification]);
@@ -122,18 +115,17 @@ export function AppProvider({ userId, children }: AppProviderProps) {
     const newT: Transaction = { ...t, id: generateId(), createdAt: format(new Date(), 'yyyy-MM-dd') };
     setTransactions(prev => {
       const updated = [newT, ...prev];
+      // Read settings from ref — avoids setState-inside-setState anti-pattern
       if (newT.type === 'despesa') {
-        setSettings(currentSettings => {
-          if (newT.value >= currentSettings.largeExpenseThreshold) {
-            addSystemNotification({
-              type: 'warning',
-              title: 'Despesa grande detectada',
-              message: `Uma despesa de ${formatCurrency(newT.value)} foi registrada em ${newT.category} (${newT.description}).`,
-            });
-          }
-          checkMonthlyGoal(updated, currentSettings.monthlyGoal);
-          return currentSettings;
-        });
+        const { largeExpenseThreshold, monthlyGoal } = settingsRef.current;
+        if (newT.value >= largeExpenseThreshold) {
+          addSystemNotification({
+            type: 'warning',
+            title: 'Despesa grande detectada',
+            message: `Uma despesa de ${formatCurrency(newT.value)} foi registrada em ${newT.category} (${newT.description}).`,
+          });
+        }
+        checkMonthlyGoal(updated, monthlyGoal);
       }
       return updated;
     });
@@ -151,8 +143,7 @@ export function AppProvider({ userId, children }: AppProviderProps) {
   }, []);
 
   const addNote = useCallback((n: Omit<Note, 'id' | 'createdAt'>) => {
-    const newN: Note = { ...n, id: generateId(), createdAt: format(new Date(), 'yyyy-MM-dd') };
-    setNotes(prev => [newN, ...prev]);
+    setNotes(prev => [{ ...n, id: generateId(), createdAt: format(new Date(), 'yyyy-MM-dd') }, ...prev]);
     toast.success('Anotação salva!');
   }, []);
 

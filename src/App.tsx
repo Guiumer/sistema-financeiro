@@ -39,7 +39,7 @@ function AppContent() {
   };
 
   return (
-    <AppProvider userId={user.id}>
+    <AppProvider key={user.id} userId={user.id}>
       <div style={{ display: 'flex', minHeight: '100vh', background: '#0f1117' }}>
         <Sidebar current={page} onChange={setPage} />
         <main style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
